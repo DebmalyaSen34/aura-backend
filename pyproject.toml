@@ -1,0 +1,14 @@
+[tool.poetry]
+name = "fast-preperly"
+version = "0.1.0"
+description = "This is fast api backend for my aura application"
+authors = ["DebmalyaSen34 <ds22btb0a15@student.nitw.ac.in>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.11"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
