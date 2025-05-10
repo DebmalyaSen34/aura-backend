@@ -6,7 +6,7 @@ app = FastAPI()
 
 origins = [
     "http://localhost:3000",
-    "https://aura-azure.vercel.app/"
+    "https://aura-azure.vercel.app"
 ]
 app.add_middleware(
     CORSMiddleware,
