@@ -1,5 +1,5 @@
 from fastapi import FastAPI
-from .routers import authentication, incidents, votes
+from .routers import authentication, incidents, votes, profile
 from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI()
@@ -22,3 +22,5 @@ app.include_router(authentication.router)
 app.include_router(incidents.router)
 
 app.include_router(votes.router)
+
+app.include_router(profile.router)

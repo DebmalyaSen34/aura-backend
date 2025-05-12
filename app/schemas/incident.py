@@ -18,4 +18,4 @@ class ShowIncident(BaseModel):
     is_downvoted: bool = False
     
     class Config:
-        orm_mode = True
+        from_attributes = True

@@ -10,8 +10,14 @@ class User(Auth):
     
 class ShowUser(BaseModel):
     id: str
-    email: str
-    user_metadata: Optional[Dict] = None
-    
+    name: str
+    created_at: str
+    incidents: int    
     class Config():
         from_attributes = True
+        
+class UpdateUser(BaseModel):
+    name: Optional[str] = None
+    email: Optional[str] = None
+    username: Optional[str] = None
+    bio: Optional[str] = None

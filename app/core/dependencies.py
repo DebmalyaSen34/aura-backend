@@ -21,18 +21,31 @@ def get_current_user(
         headers={"WWW-Authenticate": "Bearer"},
     )
     
-    supabase = db.get_supabase_client()
+    supabase = db.get_supabase_client(token=token)
     
     try:
         user_response = supabase.auth.get_user(token)
+        
         user = user_response.user
+        
         if not user:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"User not Found: {e}",
                 headers={"WWW-Authenticate": "Bearer"},
             )
-        return user
+        
+        class UserWithSession:
+            
+            def __init__(self, user, token):
+                self.user = user
+                self.token = token
+                
+                for key, value in user.__dict__.items():
+                    setattr(self, key, value)        
+        
+        return UserWithSession(user, token)
+        
     except AuthApiError as e:
         raise credentials_exception
     except Exception as e:

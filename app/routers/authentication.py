@@ -32,6 +32,17 @@ def register(request: user.User):
                 }
             }
         )
+        
+        supabase_with_token = db.get_supabase_client(token=auth_response.session.access_token)
+        
+        # Create a profile for the user
+        supabase_with_token.table("profiles").insert({
+            "id": auth_response.user.id,
+            "created_at": auth_response.user.created_at.isoformat(),
+            "name": auth_response.user.user_metadata["display_name"],
+        }).execute()
+
+        return auth_response
 
     except AuthApiError as e:
         raise HTTPException(
@@ -63,18 +74,15 @@ def login(request: OAuth2PasswordRequestForm = Depends()):
             }
         )
         
-        session = supabase.auth.get_session()
-        
-        print(f"Session: {session}")
-        
         # Get the access token and token type
         access_token = response.session.access_token
-        token_type = "bearer"
+        
+        supabase_with_token = db.get_supabase_client(token=access_token)
         
         # Return the access token and token type
         return {
             "access_token": access_token,
-            "token_type": token_type,
+            "token_type": "bearer",
         }
     except AuthApiError as e: # Handle authentication errors
         raise HTTPException(
@@ -93,12 +101,14 @@ def login(request: OAuth2PasswordRequestForm = Depends()):
 @router.post("/logout")
 def logout(current_user: user.User = Depends(dependencies.get_current_user)):
     # Supabase client
-    supabase = db.get_supabase_client()
+    
+    token = current_user.session.access_token if hasattr(current_user, 'session') else None
+    
+    supabase = db.get_supabase_client(token=token)
 
     try:
         # Sign out user
-        response = supabase.auth.sign_out()
-        
+        response = supabase.auth.sign_out()        
         return True
     except AuthApiError as e: # Handle authentication errors
         raise HTTPException(
@@ -117,6 +127,24 @@ def logout(current_user: user.User = Depends(dependencies.get_current_user)):
 @router.get("/user")
 def get_user(current_user: user.User = Depends(dependencies.get_current_user)):
     
-    # Get the current user data
-    return user_utility.get_cleaned_user_data(current_user)
-    # return current_user
+    token = current_user.token
+    supabase = db.get_supabase_client(token=token)
+    
+    try:
+        
+        user_data = supabase.table("profiles").select("*").eq("id", current_user.id).single().execute()
+        
+        return user_data
+        
+    except AuthApiError as e:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=f"You are not logged in to get user data: {e}",
+        )
+        
+    except Exception as e:
+        print(f"An unexpected error occurred: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"An error occurred: {e}",
+        )

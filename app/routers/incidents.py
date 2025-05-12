@@ -1,67 +1,38 @@
-from fastapi import APIRouter, Depends, HTTPException, status
-from ..core import db, dependencies
+from fastapi import APIRouter, Depends, status
+from ..core import dependencies
 from ..schemas import user, incident
-from gotrue.errors import AuthApiError
 from typing import List
+from ..repo import incidents
 
 router = APIRouter(
     tags=["incidents"],
     prefix="/incidents",
 )
 
-@router.get("/get_incidents")
+@router.get("/get_incidents", status_code=status.HTTP_200_OK)
 def get_all_incidents(current_user: user.User = Depends(dependencies.get_current_user)):
-    return True
+    
+    token = current_user.token
+    
+    return incidents.get_all_incidents(token=token)
 
-@router.post("/create_incident")
+@router.post("/create_incident", status_code=status.HTTP_201_CREATED)
 def create_incident(incident_data: incident.CreateIncident, current_user: user.User = Depends(dependencies.get_current_user)):
     
-    supabase = db.get_supabase_client()
+    token = current_user.token
     
-    try:
-        response = supabase.table("incident").insert({
-            "content": incident_data.content,
-            "user_id": current_user.id  
-        }).execute()
-        
-        return response.data
-    except AuthApiError as e:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Incident creation failed: {e}",
-        )
-    except Exception as e:
-        print(f"An unexpected error occurred: {e}")
-        print(f"Error details: {str(e)}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"An error occurred: {e}",
-        )
+    return incidents.create_incident(incident_data, token, current_user.id)
 
 @router.get("/incident-home", status_code=status.HTTP_200_OK, response_model=List[incident.ShowIncident])
 def incident_home(current_user: user.User = Depends(dependencies.get_current_user)):
     
-    supabase = db.get_supabase_client()
+    token = current_user.token
     
-    try:
-        
-        response = supabase.rpc(
-            "get_incidents_with_stats",
-            {
-                'p_user_id': current_user.id
-            }
-        ).order("created_at", desc=True).execute()
-        
-        return response.data
-    except AuthApiError as e:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Incident retrieval failed: {e}",
-        )
-    except Exception as e:
-        print(f"An unexpected error occurred: {e}")
-        print(f"Error details: {str(e)}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"An error occurred: {e}",
-        )
+    return incidents.incident_home(token, current_user.id)
+
+@router.get("/{incident_id}", status_code=status.HTTP_200_OK, response_model=incident.ShowIncident)
+def get_incident_by_id(incident_id: int, current_user: user.User = Depends(dependencies.get_current_user)):
+    
+    token = current_user.token
+    
+    return incidents.get_incident_by_id(incident_id, token, current_user.id)
