@@ -12,7 +12,9 @@ router = APIRouter(
 @router.post("/", status_code=status.HTTP_201_CREATED)
 def vote_incident(vote_data: votes.Votes, current_user: user.User = Depends(dependencies.get_current_user)):
     
-    supabase = db.get_supabase_client()
+    token = current_user.token
+    
+    supabase = db.get_supabase_client(token)
     
     try:
         # Check if the incident exists
@@ -52,5 +54,5 @@ def vote_incident(vote_data: votes.Votes, current_user: user.User = Depends(depe
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            details=f"An error occurred: {e}"
+            detail=f"An error occurred: {e}"
         )
