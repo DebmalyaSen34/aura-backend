@@ -1,8 +1,9 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, File, UploadFile
 from ..core import db, dependencies
 from ..schemas import user, incident
 from gotrue.errors import AuthApiError
 from typing import List
+from ..repo import profiles
 
 router = APIRouter(
     prefix="/profile",
@@ -11,82 +12,40 @@ router = APIRouter(
 
 @router.get("/", status_code=status.HTTP_200_OK)
 def get_user(current_user: user.User = Depends(dependencies.get_current_user)):
-    
-    token = current_user.token
-    
-    supabase = db.get_supabase_client(token=token)
-    
-    try:
-        user_data = supabase.table("profiles").select("""
-            *,
-            incident:incident(
-                id,
-                content,
-                created_at
-            )
-        """).eq("id", current_user.id).execute()
-        
-        if not user_data.data:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
-        
-        return user_data.data
-    
-    except AuthApiError as e:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, 
-            detail=f"Authentication Error: {str(e)}")
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Database Error: {str(e)}")
+    return profiles.get_user(current_user.id, current_user.token)
         
 @router.get("/{user_id}", status_code=status.HTTP_200_OK, response_model=user.ShowUser)
 def get_user_by_id(user_id: str, current_user: user.User = Depends(dependencies.get_current_user)):
-    
-    supabase = db.get_supabase_client()
-    
-    try:
-        user_data = supabase.table("profiles").select("*").eq("id", user_id).single().execute()
-        
-        if not user_data.data:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"User not found with id: {user_id}")
-            
-        return user_data.data
-    except AuthApiError as e:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=f"Authentication Error: {str(e)}")
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Database Error: {str(e)}")
+    return profiles.get_user_by_id(user_id, current_user.token)
         
 @router.put("/", status_code=status.HTTP_200_OK)
 def update_user(request: user.UpdateUser, current_user: user.User = Depends(dependencies.get_current_user)):
-    
-    supabase = db.get_supabase_client()
-    
-    try:
+    return profiles.update_user(current_user.id, request, current_user.token)
         
-        user_data = supabase.table("profiles").update(request.model_dump(exclude_unset=True)).eq("id", current_user.id).execute()
-        
-        if not user_data.data:
+@router.post("/upload-profile-image", status_code=status.HTTP_200_OK)
+def upload_profile_image(
+    file: UploadFile = File(...),
+    current_user: user.User = Depends(dependencies.get_current_user)
+):
+    # Validate file type
+    if not file.content_type.startswith('image/'):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="File must be an image"
+        )
+    
+    # Validate file size (e.g., max 5MB)
+    MAX_FILE_SIZE = 5 * 1024 * 1024  # 5MB
+    file_size = 0
+    for chunk in file.file:
+        file_size += len(chunk)
+        if file_size > MAX_FILE_SIZE:
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="User not found"
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="File size too large. Maximum size is 5MB"
             )
-            
-        return user_data.data
     
-    except AuthApiError as e:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=f"Authentication Error: {str(e)}"
-        )
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Database Error: {str(e)}"
-        )
+    # Reset file pointer after reading
+    file.file.seek(0)
+    
+    return profiles.upload_profile_image(current_user.token, current_user.id, file)

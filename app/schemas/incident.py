@@ -10,6 +10,8 @@ class ShowIncident(BaseModel):
     content: str
     user_id:str
     display_name: str
+    username: Optional[str] = None
+    profile_image: Optional[str] = None
     created_at: datetime
     total_upvotes: int = 0
     total_downvotes: int = 0
