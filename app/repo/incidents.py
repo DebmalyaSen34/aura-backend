@@ -31,9 +31,10 @@ def create_incident(incident_data: incident.CreateIncident, token: str, user_id:
     
     try:
         
+        
         response = supabase.table('incident').insert({
             "content": incident_data.content,
-            "user_id": user_id 
+            "user_id": user_id
         }).execute()
         
         return response.data

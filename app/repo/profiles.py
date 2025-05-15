@@ -168,3 +168,29 @@ def upload_profile_image(token: str, user_id: str, file: UploadFile = File(...))
     except Exception as e:
         _handle_db_error(e)
         
+        
+def get_liked_incidents(token: str, user_id: str) -> dict:
+    
+    supabase = _get_supabase_client(token)
+    
+    try:
+        
+        
+        response = supabase.rpc(
+            "fetch_user_upvoted_incidents",
+            params={
+                'request_user_id': user_id,
+            }
+        ).execute()
+        
+    
+        if not response.data:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="No liked incidents found"
+            )
+        
+        return response.data
+        
+    except Exception as e:
+        _handle_db_error(e)

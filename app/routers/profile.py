@@ -14,7 +14,7 @@ router = APIRouter(
 def get_user(current_user: user.User = Depends(dependencies.get_current_user)):
     return profiles.get_user(current_user.id, current_user.token)
         
-@router.get("/{user_id}", status_code=status.HTTP_200_OK, response_model=user.ShowUser)
+@router.get("/get_user_by_id/{user_id}", status_code=status.HTTP_200_OK, response_model=user.ShowUser)
 def get_user_by_id(user_id: str, current_user: user.User = Depends(dependencies.get_current_user)):
     return profiles.get_user_by_id(user_id, current_user.token)
         
@@ -49,3 +49,17 @@ def upload_profile_image(
     file.file.seek(0)
     
     return profiles.upload_profile_image(current_user.token, current_user.id, file)
+
+@router.get("/user-liked-incidents", status_code=status.HTTP_200_OK)
+
+def get_liked_incidents(current_user: user.User = Depends(dependencies.get_current_user)):
+    
+    token = current_user.token
+    
+    try:
+        return profiles.get_liked_incidents(token=token, user_id=current_user.id)
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e)
+        )
