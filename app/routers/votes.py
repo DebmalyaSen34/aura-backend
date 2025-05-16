@@ -16,6 +16,7 @@ def vote_incident(vote_data: votes.Votes, current_user: user.User = Depends(depe
     
     supabase = db.get_supabase_client(token)
     
+    print(vote_data)
     try:
         # Check if the incident exists
         incident_response = supabase.table("incident").select("*").eq("id", vote_data.incident_id).execute()
